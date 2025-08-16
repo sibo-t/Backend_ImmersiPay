@@ -58,34 +58,6 @@ func init() {
 	fmt.Println("Successfully connected to Redis:", pong)
 }
 
-// createSession handles the creation of a new session.
-func createSession(w http.ResponseWriter, r *http.Request) {
-	sessionID := uuid.New().String()
-	newSession := Session{
-		ID:        sessionID,
-		CreatedAt: time.Now(),
-		CartData:  map[string]interface{}{},
-	}
-
-	// Serialize the session data to JSON.
-	sessionJSON, err := json.Marshal(newSession)
-	if err != nil {
-		http.Error(w, "Failed to create session", http.StatusInternalServerError)
-		return
-	}
-
-	// Store the session in Redis with a 30-minute expiration.
-	err = redisClient.Set(ctx, sessionID, sessionJSON, 30*time.Minute).Err()
-	if err != nil {
-		http.Error(w, "Failed to store session in Redis", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"session_id": sessionID})
-	fmt.Printf("New session created with ID: %s\n", sessionID)
-}
-
 // processPayment handles the payment processing logic with Redis session validation.
 func processPayment(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -138,7 +110,6 @@ func processPayment(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/create-session", createSession)
 	http.HandleFunc("/process-payment", processPayment)
 
 	fmt.Println("Payment Gateway server listening on :8080...")
