@@ -1,0 +1,31 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+
+# Build output
+/bin/
+/build/
+/out/
+
+# Vendor (if using vendoring)
+/vendor/
+
+# IDE/editor files
+*.idea/
+*.vscode/
+*.swp
+.DS_Store
+
+# Environment / virtual envs
+**/.venv/
+**/.env/
+
+# Go module cache
+**/pkg/
+
+# Logs
+*.log

@@ -1,0 +1,12 @@
+
+fastapi
+uvicorn
+pydantic
+numpy
+pillow
+cryptography
+PyJWT
+deepface
+opencv-python-headless
+couchbase>=4.2.0
+python-multipart
