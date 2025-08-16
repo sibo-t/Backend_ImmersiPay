@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ImmersiPay – Sign In</title>
+  <style>
+    :root{--bg:#0f1222;--card:#171b34;--accent:#6c5ce7;--text:#fff;--muted:#9aa4bf;--error:#ff6b6b}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;min-height:100vh;display:grid;place-items:center}
+    .wrap{width:100%;max-width:420px;padding:24px}
+    .card{background:var(--card);border-radius:16px;padding:28px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    h1{margin:0 0 8px;font-size:1.6rem} p{margin:0 0 20px;color:var(--muted)}
+    .input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid #2b335b;background:#121633;color:var(--text);outline:none}
+    .row{display:grid;gap:12px;margin:10px 0 0}
+    .btn{width:100%;padding:12px 14px;border:0;border-radius:12px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .btn-secondary{background:transparent;border:1px solid #2b335b}
+    .split{display:flex;align-items:center;gap:12px;color:var(--muted);margin:16px 0}
+    .split:before,.split:after{content:"";height:1px;background:#2b335b;flex:1}
+    .error{margin-top:10px;color:var(--error);font-size:.92rem;display:none}
+    .env-warning{padding:10px;border:1px dashed #d39; background:#2a1535;color:#ffd7ff;border-radius:10px;margin-bottom:14px;display:none}
+    .foot{margin-top:14px;color:var(--muted);font-size:.9rem}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Welcome back</h1>
+      <p>Sign in to continue to ImmersiPay</p>
+
+      <div id="envWarning" class="env-warning">
+        This page must be served over <strong>http/https</strong> (not <code>file://</code>), and browser storage must be enabled.
+      </div>
+
+      <form id="emailForm">
+        <div class="row">
+          <input id="email" class="input" type="email" autocomplete="email" placeholder="Email address" required />
+          <input id="password" class="input" type="password" autocomplete="current-password" placeholder="Password" required />
+          <button id="emailBtn" class="btn" type="submit">Sign in with Email</button>
+        </div>
+      </form>
+
+      <div class="split">or</div>
+
+      <button id="googleBtn" class="btn btn-secondary" type="button">Continue with Google</button>
+
+      <div id="err" class="error"></div>
+
+      <div class="foot">By continuing you agree to our Terms & Privacy.</div>
+    </div>
+  </div>
+
+  <!-- Firebase (Modular SDK) -->
+  <script type="module">
+    // ---- Replace with your Firebase config ----
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      appId: "YOUR_APP_ID",
+    };
+    // ------------------------------------------
+
+    // Environment guard (prevents "operation-not-supported-in-this-environment")
+    const warn = document.getElementById('envWarning');
+    const supportedProtocols = ['http:', 'https:', 'chrome-extension:'];
+    try {
+      if (!supportedProtocols.includes(window.location.protocol)) {
+        warn.style.display = 'block';
+      }
+      // quick storage probe
+      localStorage.setItem('__probe', '1');
+      localStorage.removeItem('__probe');
+    } catch (e) {
+      warn.style.display = 'block';
+    }
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+      getAuth, setPersistence, browserLocalPersistence,
+      onAuthStateChanged, signInWithEmailAndPassword,
+      GoogleAuthProvider, signInWithRedirect, getRedirectResult
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // Persist session between tabs/refresh
+    await setPersistence(auth, browserLocalPersistence);
+
+    // If already signed in, go straight to dashboard
+    onAuthStateChanged(auth, (user) => {
+      if (user) window.location.href = "dashboard.html";
+    });
+
+    // Handle redirect results (Google, etc.)
+    getRedirectResult(auth).catch(showError);
+
+    // Email/password login
+    const emailForm = document.getElementById('emailForm');
+    const emailBtn = document.getElementById('emailBtn');
+    emailForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      toggleLoading(true);
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        window.location.href = "dashboard.html";
+      } catch (err) {
+        showError(err);
+      } finally {
+        toggleLoading(false);
+      }
+    });
+
+    // Google login via Redirect (more compatible than popup on some browsers)
+    const googleBtn = document.getElementById('googleBtn');
+    googleBtn.addEventListener('click', async () => {
+      toggleLoading(true);
+      try {
+        const provider = new GoogleAuthProvider();
+        await signInWithRedirect(auth, provider);
+      } catch (err) {
+        toggleLoading(false);
+        showError(err);
+      }
+    });
+
+    function toggleLoading(isLoading){
+      emailBtn.disabled = isLoading;
+      googleBtn.disabled = isLoading;
+      emailBtn.textContent = isLoading ? "Signing in..." : "Sign in with Email";
+      googleBtn.textContent = isLoading ? "Please wait..." : "Continue with Google";
+    }
+    function showError(err){
+      const el = document.getElementById('err');
+      el.style.display = 'block';
+      const msg = (err && err.code) ? err.code : (err?.message || String(err));
+      el.textContent = friendlyMessage(msg);
+    }
+    function friendlyMessage(code){
+      const map = {
+        "auth/operation-not-supported-in-this-environment": "This sign-in method isn’t supported in the current environment. Please open this page via http/https and enable browser storage.",
+        "auth/invalid-credential": "Incorrect email or password.",
+        "auth/user-not-found": "No account found for this email.",
+        "auth/wrong-password": "Incorrect email or password.",
+        "auth/too-many-requests": "Too many attempts. Please try again later.",
+      };
+      return map[code] || code;
+    }
+  </script>
+</body>
+</html>
