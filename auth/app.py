@@ -3,6 +3,11 @@ from cryptography.fernet import Fernet
 from deepface import DeepFace
 import numpy as np
 from numpy.linalg import norm
+from datetime import datetime, timedelta
+import redis
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
+
 
 # -------------------------
 # Mock Couchbase
@@ -76,3 +81,48 @@ if best_sim > 0.7:
     print(f"✅ Login success: {best_user}, similarity={best_sim}")
 else:
     print("❌ Login failed")
+
+# ---------------------------
+# Redis setup
+# ---------------------------
+redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+
+# ---------------------------
+# FastAPI app
+# ---------------------------
+app = FastAPI()
+
+# ---------------------------
+# Session model (optional dataclass)
+# ---------------------------
+class Session:
+    def __init__(self, session_id: str):
+        self.id = session_id
+        self.created_at = datetime.utcnow().isoformat()
+        self.cart_data = {}  # example field, can be extended
+
+    def to_json(self):
+        return json.dumps({
+            "id": self.id,
+            "created_at": self.created_at,
+            "cart_data": self.cart_data
+        })
+
+# ---------------------------
+# Create session endpoint
+# ---------------------------
+@app.post("/create_session")
+def create_session():
+    if best_sim > 0.7:
+        try:
+            session_id = str(uuid.uuid4())
+            new_session = Session(session_id)
+
+            # Store session in Redis with 1-minute expiration
+            redis_client.setex(session_id, timedelta(minutes=1), new_session.to_json())
+
+            print(f"New session created with ID: {session_id}")
+            return JSONResponse(content={"session_id": session_id})
+
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to create session: {str(e)}")

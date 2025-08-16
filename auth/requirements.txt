@@ -10,3 +10,4 @@ deepface
 opencv-python-headless
 couchbase>=4.2.0
 python-multipart
+redis
