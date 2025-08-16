@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import redis
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
+import uuid
 
 
 # -------------------------
@@ -16,7 +17,7 @@ class MockCollection:
     def __init__(self):
         self.store = {}
 
-    def upsert(self, doc_id, doc):
+    def insert(self, doc_id, doc):
         self.store[doc_id] = doc
         return True
 
@@ -53,7 +54,7 @@ def cosine_similarity(a, b):
 embedding1 = DeepFace.represent("/home/sibo-t/work/Backend_ImmersiPay/auth/person5.jpeg", model_name="Facenet", enforce_detection=False)[0]["embedding"]
 enc1 = encrypt_embedding(embedding1)
 
-faces_collection.upsert("face::user123", {
+faces_collection.insert("face::user123", {
     "user_id": "user123",
     "embedding": enc1,
     "model": "Facenet",
@@ -62,25 +63,7 @@ faces_collection.upsert("face::user123", {
 
 print("✅ Enrolled user123")
 
-# -------------------------
-# Login user (mock query)
-# -------------------------
-embedding2 = DeepFace.represent("/home/sibo-t/work/Backend_ImmersiPay/auth/person2.jpeg", model_name="Facenet", enforce_detection=False)[0]["embedding"]
 
-best_user = None
-best_sim = -1
-
-for doc in faces_collection.query_all():
-    stored_vec = decrypt_embedding(doc["embedding"])
-    sim = cosine_similarity(stored_vec, embedding2)
-    if sim > best_sim:
-        best_sim = sim
-        best_user = doc["user_id"]
-
-if best_sim > 0.7:
-    print(f"✅ Login success: {best_user}, similarity={best_sim}")
-else:
-    print("❌ Login failed")
 
 # ---------------------------
 # Redis setup
@@ -113,6 +96,26 @@ class Session:
 # ---------------------------
 @app.post("/create_session")
 def create_session():
+    # -------------------------
+    # Login user (mock query)
+    # -------------------------
+    embedding2 = DeepFace.represent("/home/sibo-t/work/Backend_ImmersiPay/auth/person2.jpeg", model_name="Facenet", enforce_detection=False)[0]["embedding"]
+
+    best_user = None
+    best_sim = -1
+
+    for doc in faces_collection.query_all():
+        stored_vec = decrypt_embedding(doc["embedding"])
+        sim = cosine_similarity(stored_vec, embedding2)
+        if sim > best_sim:
+            best_sim = sim
+            best_user = doc["user_id"]
+
+    if best_sim > 0.7:
+        print(f"✅ Login success: {best_user}, similarity={best_sim}")
+    else:
+        print("❌ Login failed")
+
     if best_sim > 0.7:
         try:
             session_id = str(uuid.uuid4())

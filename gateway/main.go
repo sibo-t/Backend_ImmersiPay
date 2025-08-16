@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/google/uuid"
 )
 
 // Define the context for Redis operations.
@@ -18,7 +16,7 @@ var ctx = context.Background()
 // Session represents a user's session data.
 type Session struct {
 	ID        string `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt string `json:"created_at"`
 	CartData  map[string]interface{} `json:"cart_data"`
 }
 

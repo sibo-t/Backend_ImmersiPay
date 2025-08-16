@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechSphere - Immersive 3D Tech Store</title>
+    <style>
+        :root {
+            --primary: #6c5ce7;
+            --primary-light: #a29bfe;
+            --primary-dark: #4834d4;
+            --secondary: #00cec9;
+            --background: #1a1a2e;
+            --surface: #16213e;
+            --text: #ffffff;
+            --error: #ff7675;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--background);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #app {
+            display: flex;
+            height: 100%;
+            position: relative;
+        }
+
+        #productCanvas {
+            flex: 1;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        .product-label {
+            position: absolute;
+            background: rgba(30, 30, 50, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            pointer-events: none;
+            transform: translate(-50%, -120%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .cart-sidebar {
+            width: 400px; /* Increased width */
+            background: var(--surface);
+            padding: 25px;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            overflow-y: auto;
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+
+        .cart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .cart-title {
+            font-size: 1.8rem; /* Larger font */
+            font-weight: 600;
+            color: var(--secondary);
+        }
+
+        .item-count {
+            background: var(--primary);
+            color: white;
+            padding: 6px 12px; /* Slightly larger */
+            border-radius: 20px;
+            font-size: 1rem; /* Larger font */
+            font-weight: bold;
+        }
+
+        .cart-items {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            max-height: 60vh;
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0; /* More padding */
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .item-info {
+            display: flex;
+            align-items: center;
+            gap: 15px; /* More spacing */
+        }
+
+        .item-image {
+            width: 60px; /* Larger images */
+            height: 60px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .item-name {
+            font-weight: 500;
+            font-size: 1.1rem; /* Larger font */
+        }
+
+        .item-price {
+            color: var(--secondary);
+            font-weight: 600;
+            font-size: 1.1rem; /* Larger font */
+        }
+
+        .cart-total {
+            margin-top: auto;
+            padding: 20px 0; /* More padding */
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.4rem; /* Larger font */
+            font-weight: 600;
+        }
+
+        .checkout-btn {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 18px; /* More padding */
+            border-radius: 10px; /* Slightly rounder */
+            font-size: 1.2rem; /* Larger font */
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .checkout-btn:hover {
+            background: var(--primary-light);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .checkout-btn:active {
+            background: var(--primary-dark);
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        .empty-cart {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 40px;
+            font-size: 1.2rem; /* Larger font */
+        }
+
+        @media (max-width: 768px) {
+            #app {
+                flex-direction: column;
+            }
+
+            #productCanvas {
+                height: 60vh;
+            }
+
+            .cart-sidebar {
+                width: 100%;
+                height: 40vh;
+                border-left: none;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+            }
+        }
+
+        /* Modals */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .modal {
+            background: var(--surface);
+            color: var(--text);
+            width: 90%;
+            max-width: 420px;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .modal h2, .modal h3 { margin-bottom: 10px; }
+        .modal p { opacity: 0.9; margin-bottom: 14px; }
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-secondary { background: #2b2f4a; color: #fff; }
+        .btn-outline {
+            background: transparent;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .input {
+            width: 100%;
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.12);
+            padding: 10px 12px;
+            border-radius: 8px;
+            outline: none;
+            margin: 8px 0;
+        }
+        .helper {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 6px;
+        }
+        
+        /* Face Scan Styles */
+        #faceScanVisualization {
+            width: 100%;
+            height: 200px;
+            background: #000;
+            border-radius: 8px;
+            margin: 15px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        #faceOutline {
+            position: absolute;
+            width: 150px;
+            height: 200px;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px dashed rgba(255,255,255,0.5);
+            border-radius: 50% 50% 40% 40%;
+            display: none;
+        }
+        #scanLine {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: rgba(0,255,0,0.7);
+            box-shadow: 0 0 10px rgba(0,255,0,0.7);
+            display: none;
+        }
+        #faceDot {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #0f0;
+            border-radius: 50%;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+        }
+        .verification-success {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        .verification-success i {
+            font-size: 50px;
+            color: #0f0;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <canvas id="productCanvas"></canvas>
+        <div id="productLabels"></div>
+
+        <div class="cart-sidebar">
+            <div class="cart-header">
+                <h1 class="cart-title">🛒 TechSphere</h1>
+                <span class="item-count" id="itemCount">0 items</span>
+            </div>
+
+            <div class="cart-items" id="cartItems">
+                <p class="empty-cart">Your cart is empty</p>
+            </div>
+
+            <div class="cart-total">
+                <span>Total:</span>
+                <span id="cartTotal">R0.00</span>
+            </div>
+
+            <button class="checkout-btn" id="checkoutBtn">Checkout Now</button>
+        </div>
+    </div>
+
+    <!-- Biometric vs Traditional Modal -->
+    <div class="modal-backdrop" id="paymentModal">
+        <div class="modal">
+            <h2>How would you like to pay?</h2>
+            <p>Choose your payment method below.</p>
+            <div class="btn-row">
+                <button class="btn btn-primary" id="payFaceBtn">Use Face (Biometric)</button>
+                <button class="btn btn-secondary" id="payCardBtn">Pay with Card</button>
+            </div>
+            <button class="btn btn-outline" id="closePaymentModal" style="margin-top:10px;">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Add Card Modal (shown if Face not set up before) -->
+    <div class="modal-backdrop" id="addCardModal">
+        <div class="modal">
+            <h3>Add a card to enable Face payments</h3>
+            <p>Once your card is confirmed, next time we'll complete checkout with Face automatically.</p>
+            <input class="input" id="cardName" placeholder="Cardholder Name" autocomplete="cc-name">
+            <input class="input" id="cardNumber" placeholder="Card Number" inputmode="numeric" autocomplete="cc-number">
+            <div style="display:flex; gap:10px;">
+                <input class="input" id="cardExpiry" placeholder="MM/YY" style="flex:1" autocomplete="cc-exp">
+                <input class="input" id="cardCvv" placeholder="CVV" style="flex:1" inputmode="numeric" autocomplete="cc-csc">
+            </div>
+            <div class="helper">Note: Card is linked via payment processor on the next screen.</div>
+            <div class="btn-row" style="margin-top:12px;">
+                <button class="btn btn-primary" id="saveCardBtn">Save & Continue</button>
+                <button class="btn btn-outline" id="cancelAddCardBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Face Scan Modal -->
+    <div class="modal-backdrop" id="faceScanModal">
+        <div class="modal" style="max-width: 380px;">
+            <h2>Face Verification</h2>
+            <p>Position your face in the frame</p>
+            
+            <div id="faceScanVisualization">
+                <div id="faceOutline"></div>
+                <div id="scanLine"></div>
+                <div id="faceDot"></div>
+                <div class="verification-success" id="verificationSuccess">
+                    <i>✓</i>
+                    <span>Verification Successful</span>
+                </div>
+            </div>
+            
+            <div class="btn-row">
+                <button class="btn btn-outline" id="cancelFaceScan">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Three.js -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 🛍️ Tech Products Data
+            const products = [
+                { id: 1, name: "iPhone 15 Pro", price: 999.99, type: "phone", color: 0x333333, accent: 0x666666, thumbnail: "https://images.unsplash.com/photo-1695048132592-1d06e14836a6?w=200" },
+                { id: 2, name: "MacBook Pro 14\"", price: 1999.99, type: "laptop", color: 0x1a1a1a, accent: 0x444444, thumbnail: "https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?w=200" },
+                { id: 3, name: "Apple Watch Ultra", price: 799.99, type: "watch", color: 0x222222, accent: 0x999999, thumbnail: "https://images.unsplash.com/photo-1675862359131-fa4595a6d0d7?w=200" },
+                { id: 4, name: "Samsung Galaxy S23", price: 799.99, type: "phone", color: 0x1e3a8a, accent: 0x3b82f6, thumbnail: "https://images.unsplash.com/photo-1675888654533-4a6064aa7bea?w=200" },
+                { id: 5, name: "Sony WH-1000XM5", price: 349.99, type: "headphones", color: 0x111111, accent: 0x333333, thumbnail: "https://images.unsplash.com/photo-1655720828013-2238d7b02286?w=200" },
+                { id: 6, name: "DJI Mini 3 Pro", price: 759.99, type: "drone", color: 0x1e40af, accent: 0x3b82f6, thumbnail: "https://images.unsplash.com/photo-1627855437693-dcc7b0c4ba7c?w=200" },
+                { id: 7, name: "PlayStation 5", price: 499.99, type: "console", color: 0x003399, accent: 0xffffff, thumbnail: "https://images.unsplash.com/photo-1607853202273-797f1c22a38e?w=200" },
+                { id: 8, name: "Xbox Series X", price: 499.99, type: "console", color: 0x107c10, accent: 0x20c20e, thumbnail: "https://images.unsplash.com/photo-1630082086324-9274524c35b6?w=200" },
+                { id: 9, name: "iPad Pro 12.9\"", price: 1099.99, type: "tablet", color: 0x333333, accent: 0x666666, thumbnail: "https://images.unsplash.com/photo-1597740985671-2a8a3b80502e?w=200" },
+                { id: 10, name: "AirPods Pro 2", price: 249.99, type: "earbuds", color: 0x1a1a1a, accent: 0x444444, thumbnail: "https://images.unsplash.com/photo-1633891120686-cf7f71ed3e10?w=200" },
+                { id: 11, name: "GoPro Hero 11", price: 399.99, type: "camera", color: 0xcc0000, accent: 0xff3333, thumbnail: "https://images.unsplash.com/photo-1622034155791-9f87b5a4540e?w=200" },
+                { id: 12, name: "Kindle Paperwhite", price: 139.99, type: "ereader", color: 0x111111, accent: 0x333333, thumbnail: "https://images.unsplash.com/photo-1638281569046-62e538a57d31?w=200" },
+                { id: 13, name: "Meta Quest 3", price: 499.99, type: "vr", color: 0x0066ff, accent: 0x00aaff, thumbnail: "https://images.unsplash.com/photo-1593508512255-86ab42a8e620?w=200" },
+                { id: 14, name: "Logitech MX Keys", price: 99.99, type: "keyboard", color: 0x333333, accent: 0x666666, thumbnail: "https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?w=200" },
+                { id: 15, name: "LG OLED C3", price: 1799.99, type: "tv", color: 0x111111, accent: 0x333333, thumbnail: "https://images.unsplash.com/photo-1593784991095-a205069470b6?w=200" },
+                { id: 16, name: "Nintendo Switch OLED", price: 349.99, type: "console", color: 0xe60012, accent: 0xffffff, thumbnail: "https://images.unsplash.com/photo-1633613286848-e6f43bbafb8d?w=200" },
+                { id: 17, name: "Razer Blade 15", price: 2499.99, type: "laptop", color: 0x003300, accent: 0x00cc00, thumbnail: "https://images.unsplash.com/photo-1554412933-514a83d2f3c8?w=200" },
+                { id: 18, name: "Samsung Galaxy Tab S9", price: 799.99, type: "tablet", color: 0x1a1a1a, accent: 0x444444, thumbnail: "https://images.unsplash.com/photo-1641847259287-8e2a0e2a1e3b?w=200" },
+                { id: 19, name: "Bose QuietComfort 45", price: 329.99, type: "headphones", color: 0x111111, accent: 0x333333, thumbnail: "https://images.unsplash.com/photo-1639754390580-2e7437267698?w=200" },
+                { id: 20, name: "Dyson V15 Detect", price: 699.99, type: "vacuum", color: 0xcc0000, accent: 0xff3333, thumbnail: "https://images.unsplash.com/photo-1631729371254-42c2892f0e6e?w=200" }
+            ];
+
+            // 🛒 Cart State
+            let cart = [];
+            let hasFacePayment = localStorage.getItem('hasFacePayment') === 'true';
+
+            // 🎮 Three.js Setup
+            let scene, camera, renderer, controls;
+            let productMeshes = [];
+            let raycaster = new THREE.Raycaster();
+            let mouse = new THREE.Vector2();
+            let hoveredObject = null;
+            let labels = {};
+
+            // 🚀 Initialize Scene
+            function initScene() {
+                // 🌌 Scene
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x1a1a2e);
+
+                // 📷 Camera
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.z = 10;
+                camera.position.y = 3;
+
+                // 🎨 Renderer
+                const canvas = document.getElementById('productCanvas');
+                renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+
+                // 💡 Lights
+                const ambientLight = new THREE.AmbientLight(0x404040);
+                scene.add(ambientLight);
+
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+                directionalLight.position.set(1, 1, 1);
+                scene.add(directionalLight);
+
+                // 🕹️ Controls
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+                controls.minDistance = 5;
+                controls.maxDistance = 20;
+
+                // 🛒 Add Products
+                initProducts();
+
+                // 🖱️ Event Listeners
+                window.addEventListener('resize', onWindowResize);
+                canvas.addEventListener('mousemove', onMouseMove);
+                canvas.addEventListener('click', onCanvasClick);
+
+                // 🏃‍♂️ Start Animation
+                animate();
+            }
+
+            // 🏪 Create Products
+            function initProducts() {
+                const gridSize = Math.ceil(Math.sqrt(products.length));
+                const spacing = 3;
+
+                products.forEach((product, index) => {
+                    const row = Math.floor(index / gridSize);
+                    const col = index % gridSize;
+
+                    const x = (col - (gridSize - 1) / 2) * spacing;
+                    const z = (row - (gridSize - 1) / 2) * spacing;
+
+                    const productModel = createProductModel(product);
+                    productModel.position.set(x, 0, z);
+
+                    scene.add(productModel);
+                    productMeshes.push(productModel);
+
+                    createLabel(productModel, product.name);
+                });
+            }
+
+            // 🏗️ Generate 3D Models
+            function createProductModel(product) {
+                const group = new THREE.Group();
+
+                switch(product.type) {
+                    case "phone":
+                        const phoneBody = new THREE.Mesh(
+                            new THREE.BoxGeometry(0.5, 1, 0.1),
+                            new THREE.MeshStandardMaterial({
+                                color: product.color,
+                                metalness: 0.3,
+                                roughness: 0.2
+                            })
+                        );
+                        const phoneScreen = new THREE.Mesh(
+                            new THREE.BoxGeometry(0.48, 0.98, 0.101),
+                            new THREE.MeshStandardMaterial({
+                                color: 0x000000,
+                                emissive: 0x111111,
+                                emissiveIntensity: 0.2
+                            })
+                        );
+                        phoneScreen.position.z = 0.051;
+                        group.add(phoneBody);
+                        group.add(phoneScreen);
+                        break;
+
+                    case "laptop":
+                        const laptopBase = new THREE.Mesh(
+                            new THREE.BoxGeometry(1.5, 0.1, 1),
+                            new THREE.MeshStandardMaterial({
+                                color: product.color,
+                                metalness: 0.4,
+                                roughness: 0.3
+                            })
+                        );
+                        const laptopScreen = new THREE.Mesh(
+                            new THREE.BoxGeometry(1.4, 0.9, 0.05),
+                            new THREE.MeshStandardMaterial({
+                                color: 0x000000,
+                                emissive: 0x222222,
+                                emissiveIntensity: 0.3
+                            })
+                        );
+                        laptopScreen.position.set(0, 0.5, -0.5);
+                        laptopScreen.rotation.x = -Math.PI / 4;
+                        group.add(laptopBase);
+                        group.add(laptopScreen);
+                        break;
+
+                    case "watch":
+                        const watchBody = new THREE.Mesh(
+                            new THREE.CylinderGeometry(0.5, 0.5, 0.2, 32),
+                            new THREE.MeshStandardMaterial({
+                                color: product.color,
+                                metalness: 0.7,
+                                roughness: 0.2
+                            })
+                        );
+                        watchBody.rotation.x = Math.PI / 2;
+                        const watchFace = new THREE.Mesh(
+                            new THREE.CylinderGeometry(0.45, 0.45, 0.21, 32),
+                            new THREE.MeshStandardMaterial({
+                                color: 0x000000,
+                                emissive: 0x222222,
+                                emissiveIntensity: 0.3
+                            })
+                        );
+                        watchFace.rotation.x = Math.PI / 2;
+                        group.add(watchBody);
+                        group.add(watchFace);
+                        break;
+
+                    case "headphones":
+                        const headband = new THREE.Mesh(
+                            new THREE.TorusGeometry(0.8, 0.05, 16, 32),
+                            new THREE.MeshStandardMaterial({
+                                color: product.color,
+                                metalness: 0.2,
+                                roughness: 0.5
+                            })
+                        );
+                        headband.rotation.x = Math.PI / 2;
+                        headband.position.y = 0.5;
+
+                        const leftCup = new THREE.Mesh(
+                            new THREE.SphereGeometry(0.4, 32, 32),
+                            new THREE.MeshStandardMaterial({
+                                color: product.color,
+                                metalness: 0.3,
+                                roughness: 0.4
+                            })
+                        );
+                        leftCup.position.set(-0.5, 0, 0);
+
+                        const rightCup = new THREE.Mesh(
+                            new THREE.SphereGeometry(0.4, 32, 32),
+                            new THREE.MeshStandardMaterial({
+                                color: product.color,
+                                metalness: 0.3,
+                                roughness: 0.4
+                            })
+                        );
+                        rightCup.position.set(0.5, 0, 0);
+
+                        group.add(headband);
+                        group.add(leftCup);
+                        group.add(rightCup);
+                        break;
+
+                    default:
+                        // Fallback for other types
+                        const box = new THREE.Mesh(
+                            new THREE.BoxGeometry(0.8, 0.8, 0.8),
+                            new THREE.MeshStandardMaterial({
+                                color: product.color,
+                                metalness: 0.2,
+                                roughness: 0.4
+                            })
+                        );
+                        group.add(box);
+                }
+
+                group.userData.product = product;
+                return group;
+            }
+
+            // 🏷️ Create Product Labels
+            function createLabel(model, text) {
+                const label = document.createElement('div');
+                label.className = 'product-label';
+                label.textContent = text;
+                document.getElementById('productLabels').appendChild(label);
+                labels[model.uuid] = label;
+            }
+
+            // 🔄 Update Label Positions
+            function updateLabels() {
+                productMeshes.forEach(mesh => {
+                    const label = labels[mesh.uuid];
+                    if (label) {
+                        const position = mesh.position.clone();
+                        position.project(camera);
+
+                        const x = (position.x * 0.5 + 0.5) * renderer.domElement.clientWidth;
+                        const y = (-(position.y * 0.5) + 0.5) * renderer.domElement.clientHeight;
+
+                        label.style.left = `${x}px`;
+                        label.style.top = `${y}px`;
+
+                        // Show only if visible
+                        const isVisible = position.z > -1 && position.z < 1;
+                        label.style.opacity = isVisible ? '1' : '0';
+                    }
+                });
+            }
+
+            // 🖱️ Mouse Move Interaction
+            function onMouseMove(event) {
+                mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
+                mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1;
+
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(productMeshes, true);
+
+                if (intersects.length > 0) {
+                    const intersected = intersects[0].object.parent;
+                    if (hoveredObject !== intersected) {
+                        if (hoveredObject) hoveredObject.scale.set(1, 1, 1);
+                        hoveredObject = intersected;
+                        hoveredObject.scale.set(1.1, 1.1, 1.1);
+                    }
+                } else if (hoveredObject) {
+                    hoveredObject.scale.set(1, 1, 1);
+                    hoveredObject = null;
+                }
+            }
+
+            // 🖱️ Click to Add to Cart
+            function onCanvasClick() {
+                if (hoveredObject && hoveredObject.userData.product) {
+                    addToCart(hoveredObject.userData.product);
+                    hoveredObject.scale.set(1.3, 1.3, 1.3);
+                    setTimeout(() => {
+                        if (hoveredObject) hoveredObject.scale.set(1.1, 1.1, 1.1);
+                    }, 300);
+                }
+            }
+
+            // 🛒 Add to Cart
+            function addToCart(product) {
+                cart.push(product);
+                updateCart();
+            }
+
+            // Format as Rands
+            function rands(n) {
+                return 'R' + Number(n).toFixed(2);
+            }
+
+            // 🔄 Update Cart UI
+            function updateCart() {
+                const cartItemsEl = document.getElementById('cartItems');
+                cartItemsEl.innerHTML = '';
+
+                if (cart.length === 0) {
+                    cartItemsEl.innerHTML = '<p class="empty-cart">Your cart is empty</p>';
+                } else {
+                    cart.forEach(item => {
+                        const cartItem = document.createElement('div');
+                        cartItem.className = 'cart-item';
+                        cartItem.innerHTML = `
+                            <div class="item-info">
+                                <img src="${item.thumbnail}" class="item-image" alt="${item.name}">
+                                <span class="item-name">${item.name}</span>
+                            </div>
+                            <span class="item-price">${rands(item.price)}</span>
+                        `;
+                        cartItemsEl.appendChild(cartItem);
+                    });
+                }
+
+                document.getElementById('itemCount').textContent = `${cart.length} ${cart.length === 1 ? 'item' : 'items'}`;
+                document.getElementById('cartTotal').textContent = rands(cart.reduce((sum, item) => sum + item.price, 0));
+            }
+
+            // ====== FACE VERIFICATION ======
+            function startFaceVerification() {
+                openModal(faceScanModal);
+                
+                // Show scanning elements
+                document.getElementById('faceOutline').style.display = 'block';
+                document.getElementById('scanLine').style.display = 'block';
+                document.getElementById('faceDot').style.display = 'block';
+                
+                // Animate the scan line
+                let scanPos = 0;
+                const scanInterval = setInterval(() => {
+                    scanPos = (scanPos + 2) % 200;
+                    document.getElementById('scanLine').style.top = `${scanPos}px`;
+                    
+                    // Random face dot movement to simulate detection
+                    const dot = document.getElementById('faceDot');
+                    const currentTop = parseInt(dot.style.top || '100px');
+                    const currentLeft = parseInt(dot.style.left || '190px');
+                    
+                    // Random but constrained movement
+                    const newTop = Math.max(50, Math.min(150, currentTop + (Math.random() * 6 - 3)));
+                    const newLeft = Math.max(170, Math.min(210, currentLeft + (Math.random() * 6 - 3)));
+                    
+                    dot.style.top = `${newTop}px`;
+                    dot.style.left = `${newLeft}px`;
+                    
+                    // When scan reaches bottom, complete verification
+                    if (scanPos > 180) {
+                        clearInterval(scanInterval);
+                        completeFaceVerification();
+                    }
+                }, 30);
+            }
+
+            function completeFaceVerification() {
+                // Show success animation
+                const successEl = document.getElementById('verificationSuccess');
+                successEl.style.opacity = '1';
+                
+                // Hide scanning elements
+                document.getElementById('scanLine').style.display = 'none';
+                document.getElementById('faceDot').style.display = 'none';
+                
+                // Process payment after short delay
+                setTimeout(() => {
+                    closeModal(faceScanModal);
+                    alert("Payment successful! Face verification complete.");
+                }, 1500);
+            }
+
+            // Helpers to open/close modals
+            const paymentModal = document.getElementById('paymentModal');
+            const addCardModal = document.getElementById('addCardModal');
+            const faceScanModal = document.getElementById('faceScanModal');
+            function openModal(el) { el.style.display = 'flex'; }
+            function closeModal(el) { el.style.display = 'none'; }
+
+            // 💳 Checkout flow
+            function handleCheckout() {
+                if (cart.length === 0) {
+                    alert("🛒 Your cart is empty!");
+                    return;
+                }
+                openModal(paymentModal);
+            }
+
+            // Button hooks
+            document.getElementById('checkoutBtn').addEventListener('click', handleCheckout);
+            document.getElementById('closePaymentModal').addEventListener('click', () => closeModal(paymentModal));
+            document.getElementById('cancelFaceScan').addEventListener('click', () => closeModal(faceScanModal));
+
+            // Pay with Card
+            document.getElementById('payCardBtn').addEventListener('click', () => {
+                closeModal(paymentModal);
+                alert("Redirecting to card payment...");
+            });
+
+            // Use Face (biometric)
+            document.getElementById('payFaceBtn').addEventListener('click', () => {
+                if (!hasFacePayment) {
+                    // First time: prompt to "add a card"
+                    closeModal(paymentModal);
+                    openModal(addCardModal);
+                } else {
+                    // Already set up -> start face verification
+                    closeModal(paymentModal);
+                    startFaceVerification();
+                }
+            });
+
+            // Save Card -> set flag, reassure
+            document.getElementById('saveCardBtn').addEventListener('click', () => {
+                hasFacePayment = true;
+                localStorage.setItem('hasFacePayment', 'true');
+                closeModal(addCardModal);
+                alert("✅ Card linked. Next time we'll auto-complete checkout with Face.");
+            });
+            document.getElementById('cancelAddCardBtn').addEventListener('click', () => {
+                closeModal(addCardModal);
+            });
+
+            // 🖥️ Resize Handler
+            function onWindowResize() {
+                const canvas = renderer.domElement;
+                camera.aspect = canvas.clientWidth / canvas.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            }
+
+            // 🎬 Animation Loop
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                productMeshes.forEach(mesh => mesh.rotation.y += 0.005);
+                updateLabels();
+                renderer.render(scene, camera);
+            }
+
+            // ⚡ Initialize
+            initScene();
+        });
+    </script>
+</body>
+</html>
